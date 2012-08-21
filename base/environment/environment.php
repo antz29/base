@@ -2,7 +2,7 @@
 
 namespace Base;
 
-class Enviroment {
+class Environment {
 
 	static private $_instance;
 
@@ -12,7 +12,7 @@ class Enviroment {
 	/**
 	 * Get a singleton instance of the class.
 	 *
-	 * @return Enviroment
+	 * @return Environment
 	 */
 	static public function getInstance()
 	{
@@ -145,21 +145,31 @@ class Enviroment {
 	 */
 	public function detectEnvironment(array $environments,$default = 'production')
 	{
-		$host = $this->getServer('HTTP_HOST');
+		$server = $this->getServer();
 
 		foreach ($environments as $env => $settings) {
-			if (isset($settings['HTTP_HOST'])) {
-				$hosts = $settings['HTTP_HOST'];
-				if (is_array($hosts)) {
-					if (in_array($host, $hosts)) {
-						return $env;
+			$count = count($settings);
+			$match = 0;
+			foreach ($settings as $setting => $value) {
+				if (isset($server[$setting])) {
+					$test = $server[$setting];
+
+					if (is_array($value)) {
+						$value = array_filter($value,function($val) use ($test) {
+							return ($val == $test);
+						});
+						$match += count($value) ? 1 : 0;
 					}
-				} else {
-					if ($hosts == $host) {
-						return $env;
+					elseif (is_callable($value)) {
+						$match += $value($test) ? 1 : 0;
+					}
+					elseif (is_scalar($value)) {
+						$match += ($value == $test) ? 1 : 0;
 					}
 				}
 			}
+
+			if ($match == $count) return $env;
 		}
 
 		return $default;

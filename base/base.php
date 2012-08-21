@@ -53,20 +53,25 @@ class Base {
 		$path = realpath($layout);
 		if (!$path) {
 			$path = realpath("{$this->_config->templates}/{$layout}.php");
+			if (!$path) {
+				$path = BASE_ROOT.'template'.DS.'default_templates'.DS.'layout.php';
+			}
 		}
 		
 		if (!$this->_layout) {
 			$this->_layout = new Template($this);
 		}
+
 		$this->_layout->setPath($path);
 	}
 
 	public function getModel($name,$module=null) {
 		$class = $this->getAppClass('Models',$name,$module);
-		
 		if (class_exists($class)) {
 			return new $class($this);
 		}
+
+		throw new \Exception("Could not load model {$class}");
 		return null;
 	}
 
@@ -89,7 +94,10 @@ class Base {
 
 		$res = $this->getAppClass('Resources',$type);
 
-		if (!class_exists($res)) return null;
+		if (!class_exists($res)) {
+			$res = '\\Base\\Resources\\'.$type;
+			if (!class_exists($res)) return null;
+		}
 
 		$config = $this->_config->resources->$name;
 
@@ -253,6 +261,13 @@ class Base {
 	 */
 	public function getRequest() {
 		return Request::getInstance();
+	}
+
+	/**
+	 * @return Base\Environment;
+	 */
+	public function getEnvironment() {
+		return Environment::getInstance();
 	}
 
 	/**

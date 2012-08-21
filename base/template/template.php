@@ -30,6 +30,8 @@ class Template {
 	
 	public function setPath($file) 
 	{			
+		if (!$file) return false;
+
 		if (isset($this->_parent)) {
 			$path = realpath($this->_parent->getRoot() . '/' . $file);	
 			if ($path) {
@@ -42,6 +44,7 @@ class Template {
 					$this->_path = $path;
 					return true;
 				}
+				return false;
 			}
 		}
 		else {

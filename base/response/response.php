@@ -288,7 +288,7 @@ class Response {
 	 */
 	public function setCookie($name,$value,$expire=0,$path='/',$domain=null) 
 	{
-		$https = Enviroment::getInstance()->getServer('HTTPS');
+		$https = Environment::getInstance()->getServer('HTTPS');
 		$secure = ($https && $https !== 'off') ? true : false;
 
 		$httponly = $secure ? true : false;

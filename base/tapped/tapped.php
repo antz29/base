@@ -1,5 +1,4 @@
-<?php
-namespace Base;
+<?php namespace Base;
 
 class Tapped
 {
@@ -34,14 +33,10 @@ class Tapped
 	 */
 	public function addPath($path)
 	{	
-		if (!is_dir($path))
-		{
-			throw new \Exception("Failed to add Tapped path '{$path}'. It does not exist or is not a directory.");
-		}
-		
-		if (!$this->_init) $this->init();
-
 		$path = realpath($path);
+		if (!$path) return $this;
+
+		if (!$this->_init) $this->init();
 
 		$this->_paths[$path] = $path;
 		
@@ -158,10 +153,11 @@ class Tapped
 		$classes = array();
 		foreach ($tokens as $i => $token)
 		{
-			if ($token[0] == T_CLASS || $token[0] == T_INTERFACE)
+			if ($token[0] == T_CLASS || $token[0] == T_INTERFACE || $token[0] == T_TRAIT)
 			{
 				$i += 2;
-				$type = ($token[0] == T_CLASS) ? 'class' : 'interface';
+				$types = array(T_CLASS => 'class',T_INTERFACE => 'interface', T_TRAIT => 'trait');
+				$type = isset($types[$token[0]]) ? $types[$token[0]] : 'unknown';
 				$class = $tokens[$i][1];
 				
 				if ($namespace) {
@@ -176,6 +172,7 @@ class Tapped
 				$i += 2;
 				$namespace = "";
 				while($tokens[$i] != ';') {
+
 					$namespace .= $tokens[$i][1];
 					$i++;
 				}

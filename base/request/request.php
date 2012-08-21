@@ -10,6 +10,7 @@ class Request
 	private $_method;
 	private $_headers;
 	private $_cookies;
+	private $_query;
 
 	private $_base_uri;
 	
@@ -88,6 +89,31 @@ class Request
 	public function setMethod($method)
 	{
 		return $this->_method = $method;
+	}
+
+	/**
+	 * getQuery
+	 * 
+	 * Get the parsed query string data as an associative array
+	 *
+	 * @return array
+	 */
+	public function getQuery($element = null)
+	{
+		if (!isset($this->_query)) $this->setQuery($this->getRequestQuery());
+		return isset($element) ? (isset($this->_query[$element]) ? $this->_query[$element] : null) : $this->_query;
+	}
+
+	/**
+	 * setQuery
+	 * 
+	 * Set the parsed query string data to an associative array
+	 *
+	 * @param array $query
+	 */
+	public function setQuery(array $query = array())
+	{
+		$this->_query = $query;
 	}
 
 	/**
@@ -461,6 +487,28 @@ class Request
 	}
 
 	/**
+	 * getRequestQuery
+	 * 
+	 * Return the query string, either parsed or raw by passing in boolean true.
+	 *
+	 * @return string|array
+	 */
+	private function getRequestQuery($raw=false)
+	{
+		if (php_sapi_name() == 'cli') {
+			return "";
+		}
+
+		$query = parse_url($_SERVER['REQUEST_URI']);
+		$query = isset($query['query']) ? $query['query'] : "";
+			
+		if ($raw) return $query;
+
+		parse_str($query,$query);
+		return $query;
+	}
+
+	/**
 	 * array_map method used by getRequestHeaders
 	 *
 	 * @see getRequestHeaders
@@ -563,7 +611,7 @@ class Request
 			$header = explode(',',$header);
 			return array_map(array($this,'cleanHeader'),$header);
 		} else {
-			return $header;
+			return $this->cleanHeader($header);
 		}
 	}
 

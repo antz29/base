@@ -27,6 +27,11 @@ class HttpMessage {
 		$this->_url = $url;
 	}
 
+	public function getUrl() {
+		if ($this->_type == self::RESPONSE) return null;
+		return $this->_url;
+	}
+
 	public function setParams($params) {
 		if ($this->_type == self::RESPONSE) return null;
 		$this->_params = $params;
@@ -90,7 +95,8 @@ class HttpMessage {
 		$url = $this->_url;
 	
 		if (count($this->_params)) {
-			if (isset($this->_headers['content-type']) && $this->_method != 'GET') {
+			if (!$this->_content && !isset($this->_headers['content-type']) && $this->_method != 'GET') {
+				$this->setHeader('content-type','application/x-www-form-urlencoded');
 				$this->_content = http_build_query($this->_params); 
 			}
 			else {
@@ -116,13 +122,13 @@ class HttpMessage {
 		}
 		
 		if (stristr($this->_url, 'https')) {
-      		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
-        	curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+	      		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+        		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
 		}
 		
 		$this->_headers['content-length'] = strlen($this->_content);
 		
-		$headers = array();		
+		$headers = array();
 		foreach ($this->_headers as $header => $value) {
 			$headers[] = "{$header}: $value";
 		}
@@ -133,11 +139,22 @@ class HttpMessage {
 			curl_setopt($ch, CURLOPT_USERPWD, $this->_user . ':' . $pass);
 		}		
 		
-		$response = curl_exec($ch);
-		$spl = explode("\r\n\r\n", $response, 2);
+		$response = explode("\r\n",curl_exec($ch));
+
+		$headers = array_filter($response,function($val) {
+			$ret = false;
+			if (preg_match("!^[0-9A-Za-z\-]+:.*$!",$val)) $ret = true;
+			return $ret;
+		}); 
 		
-		$headers = explode("\r\n",trim($spl[0]));
-		
+		$content = array_filter($response,function($val) {
+			$ret = true;
+			if (preg_match("!^HTTP/(1\.0|1\.1) [0-9]{3} [\w\s]+$!",$val)) $ret = false;
+			if (preg_match("!^[0-9A-Za-z\-]+:.*$!",$val)) $ret = false;
+			return $ret;
+		}); 
+		$content = trim(implode("\r\n",$content));
+
 		$heads = array();
 		foreach ($headers as $header) {
 			$header = explode(':',$header,2);
@@ -149,7 +166,7 @@ class HttpMessage {
 		
 		$resp = new HttpMessage();
 		$resp->_type = self::RESPONSE;
-		$resp->_content = isset($spl[1]) ? trim($spl[1]) : '';
+		$resp->_content = $content ? $content : '';
 		$resp->_status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 		$resp->_headers = $heads;
 		
@@ -160,7 +177,7 @@ class HttpMessage {
 		$last = null;
 		
 		foreach ($headers as $i => $val) {
-			if (preg_match("!HTTP/(1\.0|1\.1) [0-9]{3} \w+!",$val)) {
+			if (preg_match("!^HTTP/(1\.0|1\.1) [0-9]{3} [\w\s]+$!",$val)) {
 				$last = $i;
 			}
 		}
