@@ -51,10 +51,12 @@ class Base {
 
 	public function setLayout($layout) {
 		$path = realpath($layout);
+		$default = false;
 		if (!$path) {
 			$path = realpath("{$this->_config->templates}/{$layout}.php");
 			if (!$path) {
 				$path = BASE_ROOT.'template'.DS.'default_templates'.DS.'layout.php';
+				$default = true;
 			}
 		}
 		
@@ -63,6 +65,7 @@ class Base {
 		}
 
 		$this->_layout->setPath($path);
+		if ($default) $this->_layout->set('_default',true);
 	}
 
 	public function getModel($name,$module=null) {
@@ -339,6 +342,8 @@ class Base {
 		else {
 			$path = "{$this->_controller}/{$this->_action}.php";
 		}
+
+		if ($this->_layout->get('_default')) $path = $this->getConfig()->templates . DS . $path;
 
 		$template->setPath($path);
 
