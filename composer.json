@@ -13,6 +13,8 @@
     ],
     "require": {
         "php": ">=5.4.0",
-        "ext-curl": "*"
+        "antz29/base-config" : "0.1.*",
+        "antz29/base-session" : "0.1.*",
+        "antz29/base-strings" : "0.1.*",
     }
 }
