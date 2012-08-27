@@ -17,7 +17,11 @@ class Base {
 	private $_force_route = false;
 
 	final public function __construct() {
-		$this->_config = new Config\Config('config.php');
+
+		$envs = require CONFIG_ROOT . 'envs.php';
+
+		$this->getEnvironment()
+		$this->_config = new Config\Config(CONFIG_ROOT . 'app.php');
 		date_default_timezone_set('Europe/London');
 		$partial_path =  isset($this->_config->partials) ? $this->_config->partials : 'partials';
 		Template::setPartialPath($partial_path);
