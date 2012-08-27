@@ -18,10 +18,14 @@ class Base {
 
 	final public function __construct() {
 
-		$envs = require CONFIG_ROOT . 'envs.php';
+		$envs = file_exists(CONFIG_ROOT . 'envs.php') ? require CONFIG_ROOT . 'envs.php' : [];
+		$default = isset($envs['_default']) ? $envs['_default'] : 'shared';
+		unset($envs['_default']);
 
-		$this->getEnvironment()
-		$this->_config = new Config\Config(CONFIG_ROOT . 'app.php');
+		$env = $this->getEnvironment()->detectEnvironment($envs,$default);
+
+		$this->_config = new Config\Config(CONFIG_ROOT . 'app.php', $env);
+
 		date_default_timezone_set('Europe/London');
 		$partial_path =  isset($this->_config->partials) ? $this->_config->partials : 'partials';
 		Template::setPartialPath($partial_path);
