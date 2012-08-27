@@ -1,0 +1,25 @@
+{
+    "hash": "424cfbb54594e79c6a3a907aa52e80f3",
+    "packages": [
+        {
+            "package": "antz29/base-config",
+            "version": "0.1.1"
+        },
+        {
+            "package": "antz29/base-session",
+            "version": "0.1.0"
+        },
+        {
+            "package": "antz29/base-strings",
+            "version": "0.1.0"
+        }
+    ],
+    "packages-dev": null,
+    "aliases": [
+
+    ],
+    "minimum-stability": "stable",
+    "stability-flags": [
+
+    ]
+}
