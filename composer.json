@@ -4,7 +4,7 @@
     "keywords": ["framework", "base"],
     "type": "library",
     "homepage": "https://github.com/antz29/base",
-    "license": "BSD",
+    "license": "MIT",
     "authors": [
         {
             "name": "John Le Drew",
