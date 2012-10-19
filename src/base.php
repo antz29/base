@@ -16,27 +16,26 @@ class Base {
 
 	private $_force_route = false;
 
-	final public function __construct() {
-
-		$envs = file_exists(CONFIG_ROOT . 'envs.php') ? require CONFIG_ROOT . 'envs.php' : [];
-		$default = isset($envs['_default']) ? $envs['_default'] : 'shared';
-		unset($envs['_default']);
-
-		$env = $this->getEnvironment()->detectEnvironment($envs,$default);
-
-		$this->_config = new Config\Config(CONFIG_ROOT . 'app.php', $env);
-
-		date_default_timezone_set('Europe/London');
-		$partial_path =  isset($this->_config->partials) ? $this->_config->partials : 'partials';
-		Template::setPartialPath($partial_path);
-		
-		if ($this->_config->error_handling) {
-			ini_set('display_errors',false);
-			set_error_handler(array($this,'errorHandler'));
-			set_exception_handler(array($this,'exceptionHandler'));
-			register_shutdown_function(array($this,'shutdownHandler'));
-		}
-	}
+    final public function __construct() {
+        $envs = file_exists(CONFIG_ROOT . 'envs.php') ? require CONFIG_ROOT . 'envs.php' : [];
+        $default = isset($envs['_default']) ? $envs['_default'] : 'shared';
+        unset($envs['_default']);
+ 
+        $env = $this->getEnvironment()->detectEnvironment($envs,$default);
+ 
+        $this->_config = new Config\Config(CONFIG_ROOT . 'app.php', $env);
+ 
+        date_default_timezone_set('Europe/London');
+        $partial_path =  isset($this->_config->partials) ? $this->_config->partials : 'partials';
+        Template::setPartialPath($partial_path);
+         
+        if ($this->_config->error_handling) {
+            ini_set('display_errors',false);
+            set_error_handler(array($this,'errorHandler'));
+            set_exception_handler(array($this,'exceptionHandler'));
+            register_shutdown_function(array($this,'shutdownHandler'));
+        }
+    }
 
 	public function route($uri) {
 		$this->_force_route = $uri;
@@ -57,24 +56,24 @@ class Base {
 		return "{$this->_config->app_namespace}\\{$ns}\\{$name}";
 	}
 
-	public function setLayout($layout) {
-		$path = realpath($layout);
-		$default = false;
-		if (!$path) {
-			$path = realpath("{$this->_config->templates}/{$layout}.php");
-			if (!$path) {
-				$path = BASE_ROOT.'template'.DS.'default_templates'.DS.'layout.php';
-				$default = true;
-			}
-		}
-		
-		if (!$this->_layout) {
-			$this->_layout = new Template($this);
-		}
-
-		$this->_layout->setPath($path);
-		if ($default) $this->_layout->set('_default',true);
-	}
+    public function setLayout($layout) {
+        $path = realpath($layout);
+        $default = false;
+        if (!$path) {
+            $path = realpath("{$this->_config->templates}/{$layout}.php");
+            if (!$path) {
+                $path = BASE_ROOT.'template'.DS.'default_templates'.DS.'layout.php';
+                $default = true;
+            }
+        }
+         
+        if (!$this->_layout) {
+            $this->_layout = new Template($this);
+        }
+ 
+        $this->_layout->setPath($path);
+        if ($default) $this->_layout->set('_default',true);
+    }
 
 	public function getModel($name,$module=null) {
 		$class = $this->getAppClass('Models',$name,$module);
@@ -337,69 +336,75 @@ class Base {
 		}
 	}
 
-	private function loadController($controller,$action,$args) {
+    private function loadController($controller,$action,$args) {
+ 
+        $request = Request::getInstance();
+ 
+        $template = new Template();
+        $template->setParent($this->_layout);
+         
+        if ($this->_active_module) {
+            $path = "{$this->_active_module['name']}/{$this->_controller}/{$this->_action}.php";
+        }
+        else {
+            $path = "{$this->_controller}/{$this->_action}.php";
+        }
+ 
+        if ($this->_layout->get('_default')) $path = $this->getConfig()->templates . DS . $path;
+ 
+        $template->setPath($path);
+ 
+        if ($controller = $this->initController($controller)) {
+            $this->runController($controller, $action, $template,$args);
+            if ($this->_force_route) return;
+        }
+        else {
+            if (!$template->getPath()) return $this->error(404,'Page not found.');
+        }
+ 
+        $this->_layout->set('content',$template->render());
+    }
 
-		$request = Request::getInstance();
+	public function error($code,$message,$description = null,$no_template = false,$trace=[]) {
+		$types = $this->getRequest()->getHeader('accept');
+		if (!is_array($types)) $types = [$types];
 
-		$template = new Template();
-		$template->setParent($this->_layout);
-		
-		if ($this->_active_module) {
-			$path = "{$this->_active_module['name']}/{$this->_controller}/{$this->_action}.php";
-		}
-		else {
-			$path = "{$this->_controller}/{$this->_action}.php";
-		}
-
-		if ($this->_layout->get('_default')) $path = $this->getConfig()->templates . DS . $path;
-
-		$template->setPath($path);
-
-		if ($controller = $this->initController($controller)) {
-			$this->runController($controller, $action, $template,$args);
-			if ($this->_force_route) return;
-		}
-		else {
-			if (!$template->getPath()) return $this->error(404,'Page not found.');
-		}
-
-		$this->_layout->set('content',$template->render());
-	}
-
-	public function error($code,$message,$description = null,$no_template = false) {
-		$type = $this->getResponse()->getHeader('content-type');
-		$type = explode(';',$type);
-
-		if ($type[0] == 'application/json') {
+		if (in_array('application/json', $types)) {
 			$out = array(
 				'status' => 'error',
-				'message' => $message,
-				'description' => $description
+				'message' => $message
 			);
+
+			if ($this->_config->dev_mode) $out['description'] = $description;
 
 			return $this->sendResponse($code,json_encode($out));
 		}
 
 		$template = new Template();
 		$template->setParent($this->_layout);
-		$path = "error_{$code}.php";
+		$path = "{$this->_config->templates}/error_{$code}.php";
 
-		if (!$template->setPath($path)) $path = "error.php";
+		if (!$template->setPath($path)) $path = "{$this->_config->templates}/error.php";
 
 		if ($no_template || !$template->setPath($path)) {
 			$this->getResponse()->setContent("<title>Error {$code}: {$message}</title><h1>Error {$code}</h1><p>{$message}</p><p>{$description}</p>");
 			return $this->sendResponse($code);
 		}
 
-		$template->set('code',$code);
-		$template->set('message',$message);
-		$template->set('description',$description);
+		$template->set('code', $code);
+		$template->set('message', $message);
+		$template->set('description', $description);
 
-		$this->_layout->set('error',true);
-		$this->_layout->set('title',"Error {$message}");
-		$this->_layout->set('content',$template->render());
+		if ($this->_config->dev_mode) {
+			$template->set('backtrace', $trace);
+		}
 
-		return $this->sendResponse($code,$this->_layout->render());
+		$this->_layout->set('error', true);
+		$this->_layout->set('title', "Error {$message}");
+		$this->_layout->set('content', $template->render());
+
+		$content = $this->_layout->render();
+		return $this->sendResponse($code, $this->_layout->render());
 	}
 
 	public function sendResponse($status = null,$content = null) {
@@ -414,18 +419,27 @@ class Base {
 	}
 
 	public function exceptionHandler($e) {
-		$this->errorHandler(0,$e->getMessage(),$e->getFile(),$e->getLine());
+		$type = get_class($e);
+		$message = "Exception '{$type}': " . $e->getMessage();
+		$this->errorHandler(1,$message,$e->getFile(),$e->getLine(),$e->getTrace());
 	}
 
-	public function errorHandler($code,$error,$file,$line) {
-		if ($code != 0 && $code != E_ERROR) return; 
+	public function errorHandler($code,$error,$file,$line,$trace=null) {
+		if ($code <= 0) return; 
 		$this->_handled = true;
 		
+		// Check if the error is actually in the current template,
+		// and if so, don't use it to render this error.
 		$no_template = false;
 		if ($file == $this->_layout->getPath()) $no_template = true;
 
+		if (!$trace) {
+			$trace = debug_backtrace();
+			array_shift($trace);
+		}
+
 		$description = $this->_config->dev_mode ? "{$error} on line {$line} in file {$file}." : 'Really sorry, but something went pop! :(';
-		$this->error(500,'Server error',$description,$no_template);
+		$this->error(500,'Server error',$description,$no_template,$trace);
 	}
 
 	public function shutdownHandler() {
